@@ -1,0 +1,5 @@
+package appconfig
+
+func initValidator()  {
+}
+
