@@ -12,6 +12,22 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
+type reopenableWriter struct {
+	filePath string
+	file *os.File
+}
+
+func (w *reopenableWriter) Write(p []byte) (n int, err error) {
+	if _, err := os.Stat(w.filePath); os.IsNotExist(err) {
+		// Reopen the file if it was deleted
+		w.file, err = os.OpenFile(w.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0744)
+		if err != nil {
+			return 0, fmt.Errorf("error reopening file: %v", err)
+		}
+	}
+	return w.file.Write(p)
+}
+
 func generalLogFile() *os.File {
 	generalLogFile, err := os.OpenFile("./storage/logs/general_log/"+time.Now().Format("01-02-2006")+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0744)
     if err != nil {
@@ -26,7 +42,8 @@ func Logger(app *fiber.App) {
 	generalLogFile := generalLogFile()
 
 	currentDate := time.Now().Format("01-02-2006")
-	file, err := os.OpenFile("./storage/logs/"+time.Now().Format("01-02-2006")+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0744)
+	filePath := "./storage/logs/" + currentDate + ".log"
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0744)
 	if err != nil {
 		panic(fmt.Sprintf("error opening file: %v", err))
 	}
@@ -52,6 +69,14 @@ func Logger(app *fiber.App) {
         latencyStr := fmt.Sprintf("%d", latency.Milliseconds())
         c.Locals("latency", latencyStr)
 
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			// Reopen the file if it was deleted
+			file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+			if err != nil {
+				panic(fmt.Sprintf("error opening file: %v", err))
+			}
+		}
+
         // Catat log di sini setelah latensi dihitung
         logEntry := fmt.Sprintf(
             "body : %s | queryParams : %s | reqHeaders : %v | time : %s | date : %s | status : %d | ip : %s | method : %s | url : %s | path : %s | route : %s | error : %v | resBody : %s | responseTime : %s\n",
@@ -66,9 +91,14 @@ func Logger(app *fiber.App) {
 
         return nil
     })
+
+	reopenableWriter := &reopenableWriter{
+		filePath: filePath,
+		file: generalLogFile,
+	}
 	
 	app.Use(logger.New(logger.Config{
-		Output: io.MultiWriter(generalLogFile),
+		Output: io.MultiWriter(reopenableWriter),
 		Format: fmt.Sprintf("body : ${locals:body} | queryParams : ${queryParams} | reqHeaders : ${reqHeaders} | time : ${time} | date : %s | status : ${status} | ip : ${ip} | ${method} | url : ${url} | path : ${path} | route : ${route} | error : ${error} | resBody: ${resBody} | responseTime : ${latency}\n", currentDate),
 		TimeZone: "Local",
 		TimeFormat: "15:04:05",
@@ -95,3 +125,5 @@ func createDirStorageLogs() {
 		fmt.Println("The provided directory named", dir, "exists")
 	}
 }
+
+
