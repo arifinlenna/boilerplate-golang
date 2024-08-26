@@ -1,129 +1,28 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type reopenableWriter struct {
-	filePath string
-	file *os.File
-}
-
-func (w *reopenableWriter) Write(p []byte) (n int, err error) {
-	if _, err := os.Stat(w.filePath); os.IsNotExist(err) {
-		// Reopen the file if it was deleted
-		w.file, err = os.OpenFile(w.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0744)
-		if err != nil {
-			return 0, fmt.Errorf("error reopening file: %v", err)
-		}
-	}
-	return w.file.Write(p)
-}
-
-func generalLogFile() *os.File {
-	generalLogFile, err := os.OpenFile("./storage/logs/general_log/"+time.Now().Format("01-02-2006")+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0744)
-    if err != nil {
-		log.Fatalf("error opening file: %v", err)
-    }
-	return generalLogFile
-}
-
 func Logger(app *fiber.App) {
-	createDirStorageLogs()
 
-	generalLogFile := generalLogFile()
+	log := &lumberjack.Logger{
+        Filename:   "storage/logs/app.log",
+        MaxSize:    1000000,  // Maximum size in megabytes before log is rotated
+        MaxBackups: 7,   // Maximum number of old log files to keep
+        MaxAge:     7,   // Maximum number of days to retain old log files
+        Compress:   true, // Compress old log files
+    }
 
-	currentDate := time.Now().Format("01-02-2006")
-	filePath := "./storage/logs/" + currentDate + ".log"
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0744)
-	if err != nil {
-		panic(fmt.Sprintf("error opening file: %v", err))
-	}
-	app.Use(func(c *fiber.Ctx) error {
-		// Simpan body asli untuk digunakan nanti
-		body := c.Body()
-		var bodyJSON interface{}
-		if err := json.Unmarshal(body, &bodyJSON); err == nil {
-			compactBody, _ := json.Marshal(bodyJSON)
-			c.Locals("body", string(compactBody))
-		} else {
-			c.Locals("body", string(body))
-		}
-		
-		return c.Next()
-	})
+    loggerNew := logrus.New()
+    loggerNew.SetOutput(log)
+    loggerNew.SetFormatter(&logrus.JSONFormatter{})
 
-
-	app.Use(func(c *fiber.Ctx) error {
-        start := time.Now()
-        err := c.Next()
-        latency := time.Since(start)
-        latencyStr := fmt.Sprintf("%d", latency.Milliseconds())
-        c.Locals("latency", latencyStr)
-
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			// Reopen the file if it was deleted
-			file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-			if err != nil {
-				panic(fmt.Sprintf("error opening file: %v", err))
-			}
-		}
-
-        // Catat log di sini setelah latensi dihitung
-        logEntry := fmt.Sprintf(
-            "body : %s | queryParams : %s | reqHeaders : %v | time : %s | date : %s | status : %d | ip : %s | method : %s | url : %s | path : %s | route : %s | error : %v | resBody : %s | responseTime : %s\n",
-            c.Locals("body"), c.OriginalURL(), c.GetReqHeaders(), time.Now().Format("15:04:05"), currentDate,
-            c.Response().StatusCode(), c.IP(), c.Method(), c.OriginalURL(), c.Path(), c.Route().Path, err,
-            c.Response().Body(), latencyStr,
-        )
-        _, err = file.WriteString(logEntry) // Write to logEntry file
-        if err != nil {
-            return err
-        }
-
-        return nil
-    })
-
-	reopenableWriter := &reopenableWriter{
-		filePath: filePath,
-		file: generalLogFile,
-	}
-	
-	app.Use(logger.New(logger.Config{
-		Output: io.MultiWriter(reopenableWriter),
-		Format: fmt.Sprintf("body : ${locals:body} | queryParams : ${queryParams} | reqHeaders : ${reqHeaders} | time : ${time} | date : %s | status : ${status} | ip : ${ip} | ${method} | url : ${url} | path : ${path} | route : ${route} | error : ${error} | resBody: ${resBody} | responseTime : ${latency}\n", currentDate),
-		TimeZone: "Local",
-		TimeFormat: "15:04:05",
-	}))
-
-	// app.Use(logger.New(logger.Config{
-	// 	Output: io.MultiWriter(file, generalLogFile),
-	// 	Format: fmt.Sprintf("body : ${locals:body} | queryParams : ${queryParams} | reqHeaders : ${reqHeaders} | time : ${time} | date : %s | status : ${status} | responseTime : ${locals:latency} | ip : ${ip} | ${method} | url : ${url} | path : ${path} | route : ${route} | error : ${error}\n",currentDate),
-	// }))
-	
-	log.SetOutput(generalLogFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+    app.Use(logger.New(logger.Config{
+        Output: loggerNew.Writer(), // Direct Fiber logs to the custom logger
+        Format: "${time} ${status} - ${method} ${path} ${body}\n", // Customize log format (optional)
+    }))
 }
-
-func createDirStorageLogs() {
-	dir := "./storage/logs/general_log"
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0744)
-		if err != nil {
-			fmt.Println(dir, "can't created directory")
-		}
-		fmt.Println("success created directory", dir)
-	} else {
-		fmt.Println("The provided directory named", dir, "exists")
-	}
-}
-
-
