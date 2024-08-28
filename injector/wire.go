@@ -5,12 +5,18 @@ package injector
 
 import (
 	"github.com/google/wire"
+	"github.com/lenna-ai/azureOneSmile.git/config"
 	"github.com/lenna-ai/azureOneSmile.git/controllers"
 	dashboardcontrollers "github.com/lenna-ai/azureOneSmile.git/controllers/dashboardControllers"
 	dashboardrepository "github.com/lenna-ai/azureOneSmile.git/repositories/DashboardRepository"
 	dashboardservices "github.com/lenna-ai/azureOneSmile.git/services/DashboardServices"
+	"gorm.io/gorm"
 )
 
+func ProvideDB() (*gorm.DB) {
+	db := config.DB
+	return db
+}
 
 var dashboardController = wire.NewSet(
 	dashboardrepository.NewDashboardRepository,
@@ -22,6 +28,7 @@ var dashboardController = wire.NewSet(
 )
 
 var setAllControllers = wire.NewSet(
+	ProvideDB,
 	dashboardController,
 	wire.Struct(new(controllers.AllControllers),"*"),
 )

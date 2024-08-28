@@ -8,16 +8,19 @@ package injector
 
 import (
 	"github.com/google/wire"
+	"github.com/lenna-ai/azureOneSmile.git/config"
 	"github.com/lenna-ai/azureOneSmile.git/controllers"
 	"github.com/lenna-ai/azureOneSmile.git/controllers/dashboardControllers"
 	"github.com/lenna-ai/azureOneSmile.git/repositories/DashboardRepository"
 	"github.com/lenna-ai/azureOneSmile.git/services/DashboardServices"
+	"gorm.io/gorm"
 )
 
 // Injectors from wire.go:
 
 func InitializeController() *controllers.AllControllers {
-	dashboardRepositoryImpl := dashboardrepository.NewDashboardRepository()
+	db := ProvideDB()
+	dashboardRepositoryImpl := dashboardrepository.NewDashboardRepository(db)
 	dashboardServicesImpl := dashboardservices.NewDashboardServices(dashboardRepositoryImpl)
 	dashboardControllerImpl := dashboardcontrollers.NewDashboardController(dashboardServicesImpl)
 	allControllers := &controllers.AllControllers{
@@ -28,8 +31,14 @@ func InitializeController() *controllers.AllControllers {
 
 // wire.go:
 
+func ProvideDB() *gorm.DB {
+	db := config.DB
+	return db
+}
+
 var dashboardController = wire.NewSet(dashboardrepository.NewDashboardRepository, wire.Bind(new(dashboardrepository.DashboardRepository), new(*dashboardrepository.DashboardRepositoryImpl)), dashboardservices.NewDashboardServices, wire.Bind(new(dashboardservices.DashboardServices), new(*dashboardservices.DashboardServicesImpl)), dashboardcontrollers.NewDashboardController, wire.Bind(new(dashboardcontrollers.DashboardController), new(*dashboardcontrollers.DashboardControllerImpl)))
 
 var setAllControllers = wire.NewSet(
+	ProvideDB,
 	dashboardController, wire.Struct(new(controllers.AllControllers), "*"),
 )
