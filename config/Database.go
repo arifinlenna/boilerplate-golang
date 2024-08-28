@@ -41,6 +41,8 @@ func Database() *gorm.DB {
     )
 
     // Connect to the database using GORM
+    // migrate -path db/migrations -database "mysql://arifin:Arifin123\!@tcp(10.217.18.4:3306)/lennadb" down
+    // migrate -path db/migrations -database "mysql://arifin:Arifin123\!@tcp(10.217.18.4:3306)/lennadb" down
     dsn := "arifin:Arifin123!@tcp(10.217.18.4:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
     db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
         Logger: newLogger, // Set the custom GORM logger
