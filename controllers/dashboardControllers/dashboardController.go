@@ -1,9 +1,12 @@
 package dashboardcontrollers
 
-import dashboardservices "github.com/lenna-ai/azureOneSmile.git/services/DashboardServices"
+import (
+	"github.com/gofiber/fiber/v2"
+	dashboardservices "github.com/lenna-ai/azureOneSmile.git/services/DashboardServices"
+)
 
 type DashboardController interface {
-	
+	Create(app *fiber.App) error
 }
 
 type DashboardControllerImpl struct {

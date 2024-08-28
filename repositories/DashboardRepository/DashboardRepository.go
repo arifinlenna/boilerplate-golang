@@ -1,9 +1,12 @@
 package dashboardrepository
 
-import "gorm.io/gorm"
+import (
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
+)
 
 type DashboardRepository interface {
-	
+	Create(app *fiber.App) error
 }
 
 type DashboardRepositoryImpl struct {
