@@ -3,6 +3,7 @@ package dashboardcontrollers
 import (
 	"github.com/gofiber/fiber/v2"
 	usermodel "github.com/lenna-ai/azureOneSmile.git/db/models/UserModel"
+	"github.com/lenna-ai/azureOneSmile.git/helpers"
 )
 
 func (dashboardControllerImpl *DashboardControllerImpl) Create(app *fiber.Ctx) error {
@@ -13,5 +14,10 @@ func (dashboardControllerImpl *DashboardControllerImpl) Create(app *fiber.Ctx) e
 	if err := dashboardControllerImpl.DashboardServices.Create(app,user); err != nil {
 		return err
 	}
-	return nil
+
+	result := fiber.Map{
+		"data":"successfully created",
+	}
+	
+	return helpers.ResultSuccessCreateJsonApi(app,result)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,7 +14,7 @@ import (
 )
 
 func setupLogger(filename string) *logrus.Logger {
-	// numberInt,_ := strconv.Atoi(os.Getenv("TIME_STORAGE_DAY"))
+	numberInt,_ := strconv.Atoi(os.Getenv("TIME_STORAGE_DAY"))
 
 	logFile, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
     if err != nil {
@@ -30,7 +31,7 @@ func setupLogger(filename string) *logrus.Logger {
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   filename,
 		MaxSize:    10000,
-		MaxBackups: 7,
+		MaxBackups: numberInt,
 		MaxAge:    1,
 		Compress:   true,
 		LocalTime:  true,                        // Use local time for log rotation

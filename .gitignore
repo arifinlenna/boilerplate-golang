@@ -1,3 +1,4 @@
 .env
 storage/logs/*.log
 storage/logs/general_log/*.log
+storage/logs/database/*.log
