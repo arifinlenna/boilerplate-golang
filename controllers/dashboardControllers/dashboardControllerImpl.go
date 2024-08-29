@@ -1,10 +1,17 @@
 package dashboardcontrollers
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
+	usermodel "github.com/lenna-ai/azureOneSmile.git/db/models/UserModel"
+)
 
-func (dashboardControllerImpl *DashboardControllerImpl) Create(app *fiber.App) error {
-	if err := dashboardControllerImpl.Create(app); err != nil {
-		panic(err)
+func (dashboardControllerImpl *DashboardControllerImpl) Create(app *fiber.Ctx) error {
+	user := new(usermodel.User)
+	if err := app.BodyParser(user); err != nil {
+		return err
+	}
+	if err := dashboardControllerImpl.DashboardServices.Create(app,user); err != nil {
+		return err
 	}
 	return nil
 }

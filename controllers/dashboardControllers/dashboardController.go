@@ -6,7 +6,7 @@ import (
 )
 
 type DashboardController interface {
-	Create(app *fiber.App) error
+	Create(app *fiber.Ctx) error 
 }
 
 type DashboardControllerImpl struct {

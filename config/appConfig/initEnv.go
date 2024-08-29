@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/joho/godotenv"
+	"github.com/lenna-ai/azureOneSmile.git/config"
 )
 
 func initEnv() {
@@ -13,4 +14,5 @@ func initEnv() {
 		fmt.Println(err.Error())
 		log.Fatal("Error loading .env file")
 	}
+	config.DB = config.Database()
 }
